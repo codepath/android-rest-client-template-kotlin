@@ -9,11 +9,24 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.RestClientTemplateKotlin">
-        <activity android:name=".MainActivity">
+        <activity
+            android:name="com.codepath.apps.restclienttemplate.LoginActivity"
+            android:label="@string/app_name"
+            android:theme="@style/AppTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="@string/intent_host"
+                    android:scheme="@string/intent_scheme" />
             </intent-filter>
         </activity>
     </application>
