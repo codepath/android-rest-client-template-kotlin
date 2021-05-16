@@ -31,8 +31,7 @@ class RestClient(context: Context) : OAuthBaseClient(
 ) {
 
     companion object {
-        val REST_API_INSTANCE: BaseApi<*> =
-            FlickrApi.instance(FlickrApi.FlickrPerm.WRITE) // Change this
+        val REST_API_INSTANCE = FlickrApi.instance(FlickrApi.FlickrPerm.WRITE) // Change this
 
         const val REST_URL = "https://api.flickr.com/services" // Change this, base API URL
 
