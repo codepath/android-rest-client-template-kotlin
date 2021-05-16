@@ -17,8 +17,8 @@ class LoginActivity : OAuthLoginActionBarActivity<RestClient>() {
         setContentView(R.layout.activity_login)
         val sampleModel = SampleModel()
         sampleModel.name = "CodePath"
-        sampleModelDao = (applicationContext as RestApplication).getMyDatabase()!!.sampleModelDao()
-        AsyncTask.execute { sampleModelDao!!.insertModel(sampleModel) }
+        sampleModelDao = (applicationContext as RestApplication).myDatabase?.sampleModelDao()
+        AsyncTask.execute { sampleModelDao?.insertModel(sampleModel) }
     }
 
 
@@ -31,7 +31,7 @@ class LoginActivity : OAuthLoginActionBarActivity<RestClient>() {
     // OAuth authenticated successfully, launch primary authenticated activity
     // i.e Display application "homepage"
     override fun onLoginSuccess() {
-        // Intent i = new Intent(this, PhotosActivity.class);
+        // val i = Intent(this, PhotosActivity::class.java)
         // startActivity(i);
     }
 
