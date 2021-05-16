@@ -29,9 +29,4 @@ class SampleModel(jsonObject: JSONObject? = null) {
             e.printStackTrace()
         }
     }
-
-    // Setters
-    fun setId(id: Long) {
-        this.id = id
-    }
 }
