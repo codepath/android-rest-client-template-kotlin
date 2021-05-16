@@ -31,7 +31,7 @@ class LoginActivity : OAuthLoginActionBarActivity<RestClient>() {
     // OAuth authenticated successfully, launch primary authenticated activity
     // i.e Display application "homepage"
     override fun onLoginSuccess() {
-        // Intent i = new Intent(this, PhotosActivity.class);
+        // val i = Intent(this, PhotosActivity::class.java)
         // startActivity(i);
     }
 
