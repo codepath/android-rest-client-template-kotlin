@@ -17,7 +17,7 @@ class LoginActivity : OAuthLoginActionBarActivity<RestClient>() {
         setContentView(R.layout.activity_login)
         val sampleModel = SampleModel()
         sampleModel.name = "CodePath"
-        sampleModelDao = (applicationContext as RestApplication).getMyDatabase()!!.sampleModelDao()
+        sampleModelDao = (applicationContext as RestApplication).myDatabase?.sampleModelDao()
         AsyncTask.execute { sampleModelDao!!.insertModel(sampleModel) }
     }
 
