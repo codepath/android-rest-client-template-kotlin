@@ -32,7 +32,7 @@ class LoginActivity : OAuthLoginActionBarActivity<RestClient>() {
     // i.e Display application "homepage"
     override fun onLoginSuccess() {
         // val i = Intent(this, PhotosActivity::class.java)
-        // startActivity(i);
+        // startActivity(i)
     }
 
     // OAuth authentication flow failed, handle the error

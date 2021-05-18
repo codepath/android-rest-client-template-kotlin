@@ -30,7 +30,7 @@ For example if I wanted to connect to Twitter:
 // RestClient.kt
 class RestClient(context: Context) : OAuthBaseClient {
     companion object {
-        val REST_API_INSTANCE: BaseApi<*> = TwitterApi.instance()
+        val REST_API_INSTANCE = TwitterApi.instance()
 
         const val REST_URL = "https://api.twitter.com/1.1"
 
@@ -67,7 +67,7 @@ fun getHomeTimeline(page: Int, handler: JsonHttpResponseHandler) {
   val apiUrl = getApiUrl("statuses/home_timeline.json")
   val params = RequestParams()
   params.put("page", String.valueOf(page))
-  getClient().get(apiUrl, params, handler)
+  client.get(apiUrl, params, handler)
 }
 ```
 
@@ -80,7 +80,7 @@ fun postTweet(body: String, handler: JsonHttpResponseHandler) {
     val apiUrl = getApiUrl("statuses/update.json")
     val params = RequestParams()
     params.put("status", body)
-    getClient().post(apiUrl, params, handler)
+    client.post(apiUrl, params, handler)
 }
 ```
 
@@ -90,11 +90,22 @@ with a `JsonHttpResponseHandler` handler:
 ```kotlin
 // SomeActivity.kt
 val client = RestApplication.getRestClient()
-client.getHomeTimeline(1, JsonHttpResponseHandler {
-    override fun onSuccess(statusCode: int, headers: Headers, json: JSON) {
-    // json.jsonArray.getJSONObject(0).getLong("id");
-  }
-});
+client.getHomeTimeline(object : JsonHttpResponseHandler() {
+    override fun onSuccess(statusCode: Int, headers: okhttp3.Headers, json: JSON) {
+        Log.i(TAG, "onSuccess!")
+        // parse json response here
+    }
+
+    override fun onFailure(
+        statusCode: Int,
+        headers: okhttp3.Headers,
+        response: String,
+        throwable: Throwable
+    ) {
+        Log.i(TAG, "onFailure!", throwable)
+    }
+
+})
 ```
 
 Based on the JSON response (array or object), you need to declare the expected type inside the OnSuccess signature i.e
@@ -102,9 +113,9 @@ Based on the JSON response (array or object), you need to declare the expected t
 
 ```kotlin
 val client = RestApplication.getRestClient()
-client.getSomething(JsonHttpResponseHandler {
-    override fun onSuccess (statusCode: Int, headers: Headers, response: Response) {
-        System.out.println(response)
+client.getSomething(object : JsonHttpResponseHandler() {
+    override fun onSuccess (statusCode: Int, headers: Headers, json: JSON) {
+        System.out.println(json)
     }
 });
 ```
@@ -134,21 +145,22 @@ class Tweet {
   // Define database columns and associated fields
   @PrimaryKey
   @ColumnInfo
-  var id: Long
+  var id: Long = 0L
 
   @ColumnInfo
-  var userHandle: String
+  var userHandle: String = ""
 
   @ColumnInfo
-  var timestamp: String
+  var timestamp: String = ""
 
   @ColumnInfo
-  var body: String
+  var body: String = ""
 
   // Use @Embedded to keep the column entries as part of the same table while still
   // keeping the logical separation between the two objects.
   @Embedded
-  var user: User
+  @Nullable
+  var user: User = null
 }
 ```
 
@@ -160,12 +172,12 @@ Note there is a separate `User` object but it will not actually be declared as a
 class User {
 
     @ColumnInfo
-    var name: String
+    var name: String + ""
 
     // normally this field would be annotated @PrimaryKey because this is an embedded object
     // it is not needed
     @ColumnInfo
-    var twitter_id: Long
+    var twitter_id: Long = 0L
 }
 ```
 Notice here we specify the SQLite table for a resource, the columns for that table, and a constructor for turning the JSON object fetched from the API into this object. For more information on creating a model, check out the [Room guide](https://developer.android.com/training/data-storage/room/).
@@ -179,7 +191,7 @@ companion object {
         val user = User()
         this.twitter_id = tweetJson.getLong("id")
         this.name = tweetJson.getString("name")
-        return user;
+        return user
     }
 }
 ```
@@ -189,39 +201,22 @@ For the Tweet object, the logic would would be:
 ```kotlin
 // models/Tweet.kt
 @Entity
-class Tweet (object: JSONObject) {
-  // ...existing code from above...
-
-  // Add a constructor that creates an object from the JSON response
-  public Tweet(object: JsonObject){
-    try {
-      this.user = User.parseJSON(object.getJSONObject("user"));
-      this.userHandle = object.getString("user_username");
-      this.timestamp = object.getString("timestamp");
-      this.body = object.getString("body");
-    } catch (JSONException e) {
-      e.printStackTrace();
+companion object {
+    fun fromJson(jsonObject: JSONObject): Tweet {
+        val tweet = Tweet()
+        tweet.body = jsonObject.getString("text")
+        tweet.createdAt = jsonObject.getString("created_at")
+        tweet.user = User.fromJson(jsonObject.getJSONObject("user"))
+        return tweet
     }
-  }
 
-  public static ArrayList<Tweet> fromJson(JSONArray jsonArray) {
-    ArrayList<Tweet> tweets = new ArrayList<Tweet>(jsonArray.length());
-
-    for (int i=0; i < jsonArray.length(); i++) {
-        JSONObject tweetJson = null;
-        try {
-            tweetJson = jsonArray.getJSONObject(i);
-        } catch (Exception e) {
-            e.printStackTrace();
-            continue;
+    fun fromJsonArray(jsonArray: JSONArray): List<Tweet> {
+        val tweets = ArrayList<Tweet>()
+        for (i in 0 until jsonArray.length()) {
+            tweets.add(fromJson(jsonArray.getJSONObject(i)))
         }
-
-        Tweet tweet = new Tweet(tweetJson);
-        tweets.add(tweet);
+        return tweets
     }
-
-    return tweets;
-  }
 }
 ```
 
@@ -242,18 +237,19 @@ import androidx.room.Query
 import java.util.List
 
 @Dao
-public interface TwitterDao {
-    // Record finders
-    @Query("SELECT * FROM Tweet WHERE post_id = :tweetId")
-    Tweet byTweetId(Long tweetId);
+interface TwitterDao {
+    // @Query annotation requires knowing SQL syntax
+    // See http://www.sqltutorial.org/
+    @Query("SELECT * FROM SampleModel WHERE id = :id")
+    fun byTweetId(tweetId: Long): Tweet?
 
     @Query("SELECT * FROM Tweet ORDER BY created_at")
-    List<Tweet> getRecentTweets();
+    fun getRecentTweets(): List<Tweet>
 
     // Replace strategy is needed to ensure an update on the table row.  Otherwise the insertion will
     // fail.
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    void insertTweet(Tweet... tweets);
+    fun insertTweet(tweets: List<Tweet>);
 }
 ```
 
@@ -266,13 +262,14 @@ We need to define a database that extends `RoomDatabase` and describe which enti
 ```kotlin
 // bump version number if your schema changes
 @Database(entities={Tweet.class}, version=1)
-public abstract class MyDatabase extends RoomDatabase {
-  // Declare your data access objects as abstract
-  public abstract TwitterDao twitterDao();
+abstract class MyDatabase : RoomDatabase() {
+    abstract fun sampleModelDao(): SampleModelDao?
 
-  // Database name to be used
-  public static final String NAME = "MyDataBase";
-
+    companion object {
+        // Database name to be used
+        const val NAME = "MyDataBase"
+    }
+}
 ```
 
 When compiling the code, the schemas will be stored in a `schemas/` directory assuming this statement
@@ -330,9 +327,9 @@ In your new authenticated activity, you can access your client anywhere with:
 
 ```kotlin
 val client = RestApplication.getRestClient()
-client.getHomeTimeline(1, new JsonHttpResponseHandler() {
-  public void onSuccess(int statusCode, Headers headers, JSON json) {
-    Log.d("DEBUG", "timeline: " + json.jsonArray.toString());
+client.getHomeTimeline(object : JsonHttpResponseHandler() {
+  fun onSuccess(statusCode: Int, headers: Headers , json: JSON) {
+    Log.d("DEBUG", "timeline: " + json.jsonArray.toString())
     // Load json array into model classes
   }
 });
@@ -354,11 +351,10 @@ val tweet = Tweet(json)
 To save, you will need to perform the database operation on a separate thread by creating an `AsyncTask` and adding the item:
 
 ```kotlin
-AsyncTask<Tweet, Void, Void> task = new AsyncTask<Tweet, Void, Void>() {
-    @Override
-    protected Void doInBackground(Tweet... tweets) {
-      TwitterDao twitterDao = ((RestApplication) getApplicationContext()).getMyDatabase().twitterDao();
-      twitterDao.insertModel(tweets);
+val task = object: AsyncTask<Tweet, Void, Void>() {
+    override fun doInBackground(List<Tweet> tweets) {
+      val twitterDao = (getApplicationContext() as RestApplication).getMyDatabase().twitterDao()
+      twitterDao.insertModel(tweets)
       return null;
     };
   };
@@ -398,7 +394,9 @@ You can use `chrome://inspect` to view the SQL tables once the app is running on
 Google uses OAuth2 APIs so make sure to use the `GoogleApi20` instance:
 
 ```kotlin
-public static final BaseApi REST_API_INSTANCE = GoogleApi20.instance()
+companion object {
+  const val REST_API_INSTANCE = GoogleApi20.instance()
+}
 ```
 
 Change `REST_URL` to use the Google API:
@@ -419,14 +417,16 @@ REST_CONSUMER_SECRET="XX-XXXXXXX"
 The OAuth2 scopes should be used according to the ones defined in [the OAuth2 scopes](https://developers.google.com/identity/protocols/googlescopes):
 
 ```kotlin
-public static final String OAUTH2_SCOPE = "https://www.googleapis.com/auth/calendar.readonly";
+companion object {
+  const val OAUTH2_SCOPE = "https://www.googleapis.com/auth/calendar.readonly"
+}
 ```
 
 Make sure to pass this value into the scope parameter:
 
 ```kotlin
-public RestClient(Context context) {
-		super(context, REST_API_INSTANCE,
+constructor RestClient(context: Context) {
+		this(context, REST_API_INSTANCE,
 				REST_URL,
 				REST_CONSUMER_KEY,
 				REST_CONSUMER_SECRET,
@@ -438,7 +438,9 @@ public RestClient(Context context) {
 Google only accepts `http://` or `https://` domains, so your `REST_CALLBACK_URL_TEMPLATE` will need to be adjusted:
 
 ```kotlin
-public static final String REST_CALLBACK_URL_TEMPLATE = "https://localhost";
+companion object {
+  const val REST_CALLBACK_URL_TEMPLATE = "https://localhost"
+}
 ```
 
 Make sure to update the `cprest` and `intent_host` to match this callback URL .
