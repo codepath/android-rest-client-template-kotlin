@@ -58,7 +58,7 @@ dependencies {
     implementation 'com.google.android.material:material:1.3.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
 
-    implementation 'com.codepath.libraries:android-oauth-handler:2.2.0'
+    implementation 'com.codepath.libraries:android-oauth-handler:2.4.0'
     implementation 'commons-codec:commons-codec:1.10'
     implementation 'androidx.appcompat:appcompat:1.2.0'
     // Glide for remote image loading
